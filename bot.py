@@ -58,7 +58,7 @@ async def run_bot(webrtc_connection):
 
     llm = AWSBedrockLLMService(
         aws_region="us-west-2",
-        model="amazon.nova-pro-v1:0",
+        model="us.amazon.nova-pro-v1:0",
         params=AWSBedrockLLMService.InputParams(temperature=0.8),
     )
 

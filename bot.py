@@ -53,7 +53,7 @@ async def run_bot(webrtc_connection):
     tts = AWSPollyTTSService(
         region="us-west-2",  # only specific regions support generative TTS
         voice_id="Mia",
-        params=AWSPollyTTSService.InputParams(engine="generative", rate="1.1"),
+        params=AWSPollyTTSService.InputParams(engine="generative", rate="1.1", language="es-MX"),
     )
 
     llm = AWSBedrockLLMService(

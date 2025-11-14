@@ -12,27 +12,28 @@ from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
-from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.aggregators.openai_llm_context import (
+    OpenAILLMContext,
+)
 from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
-from pipecat.services.aws.llm import AWSBedrockLLMService
-from pipecat.services.aws.stt import AWSTranscribeSTTService
-from pipecat.services.aws.tts import AWSPollyTTSService
+from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
+from pipecat.services.cartesia.tts import CartesiaTTSService
 from pipecat.transports.base_transport import TransportParams
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 
 load_dotenv(override=True)
 
 SYSTEM_INSTRUCTION = f"""
-Eres AWS Chatbot, un robot amigable y servicial.
+You are AWS Chatbot, a friendly and helpful robot.
 
-Tu objetivo es demostrar tus capacidades de forma breve.
+Your goal is to demonstrate your capabilities briefly.
 
-Tu respuesta se convertirá en audio así que no incluyas caracteres especiales en tus respuestas.
+Your response will be converted to audio so do not include special characters in your responses.
 
-Responde a lo que dijo el usuario de forma creativa y servicial.
+Respond to what the user said in a creative and helpful way.
 
-Mantén tus respuestas breves. Una o dos frases como máximo.
-"""
+Keep your responses brief. One or two sentences maximum."""
 
 
 async def run_bot(webrtc_connection):
@@ -46,20 +47,24 @@ async def run_bot(webrtc_connection):
         ),
     )
 
-    stt = AWSTranscribeSTTService(
-        language="es"
+    stt = DeepgramSTTService(
+        api_key=os.getenv('DEEPGRAM_API_KEY'),
+        live_options=LiveOptions(
+            model="nova-2",
+            language="en-US"
+        ),
     )
 
-    tts = AWSPollyTTSService(
-        region="us-west-2",
-        voice_id="Mia",
-        params=AWSPollyTTSService.InputParams(engine="generative", rate="1.1", language="es-MX"),
+    tts = CartesiaTTSService(
+        api_key=os.getenv('CARTESIA_API_KEY'),
+        voice_id=os.getenv('CARTESIA_VOICE_ID'),
+        model="sonic-3",
     )
 
-    llm = AWSBedrockLLMService(
-        aws_region="us-west-2",
-        model="us.amazon.nova-pro-v1:0",
-        params=AWSBedrockLLMService.InputParams(temperature=0.8),
+    llm = OpenAILLMService(
+        name="LLM",
+        api_key=os.getenv('OPENAI_API_KEY'),
+        model="gpt-4.1-mini",
     )
 
     messages = [
@@ -69,12 +74,12 @@ async def run_bot(webrtc_connection):
         },
         {
             "role": "user",
-            "content": "Empieza saludando al usuario amablemente y presentándote.",
+            "content": "Start by greeting the user kindly and introducing yourself",
         }
     ]
 
-    context = LLMContext(messages)
-    context_aggregator = LLMContextAggregatorPair(context)
+    context = OpenAILLMContext(messages=messages)
+    context_aggregator = llm.create_context_aggregator(context)
 
     pipeline = Pipeline(
         [
